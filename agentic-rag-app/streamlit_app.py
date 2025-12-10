@@ -15,6 +15,47 @@ with st.sidebar:
         API_BASE = api_base
     
     st.markdown("---")
+    st.subheader("🔧 Diagnostics")
+    if st.button("🏥 Check backend health"):
+        with st.spinner("Checking backend health..."):
+            try:
+                health_resp = requests.get(f"{API_BASE}/health", timeout=30)
+                health_resp.raise_for_status()
+                health_data = health_resp.json()
+                
+                # Display health status
+                status = health_data.get("status", "unknown")
+                if status == "ok":
+                    st.success(f"✅ Backend Status: {status.upper()}")
+                elif status == "degraded":
+                    st.warning(f"⚠️ Backend Status: {status.upper()}")
+                else:
+                    st.error(f"❌ Backend Status: {status.upper()}")
+                
+                # Display Azure OpenAI connection details
+                azure_info = health_data.get("azure_openai", {})
+                st.write("**Azure OpenAI Configuration:**")
+                st.write(f"- Configured: {'✅' if azure_info.get('configured') else '❌'}")
+                st.write(f"- Embedding URL set: {'✅' if azure_info.get('embedding_url_set') else '❌'}")
+                st.write(f"- Chat URL set: {'✅' if azure_info.get('chat_url_set') else '❌'}")
+                st.write(f"- API Key set: {'✅' if azure_info.get('api_key_set') else '❌'}")
+                
+                conn_test = azure_info.get("connection_test", "unknown")
+                if conn_test == "success":
+                    st.write(f"- Connection test: ✅ {conn_test}")
+                elif conn_test == "failed":
+                    st.write(f"- Connection test: ❌ {conn_test}")
+                    if "error" in azure_info:
+                        st.error(f"Error: {azure_info['error']}")
+                else:
+                    st.write(f"- Connection test: ⚠️ {conn_test}")
+                    
+            except requests.exceptions.RequestException as e:
+                st.error(f"❌ Failed to contact backend: {e}")
+            except ValueError:
+                st.error("❌ Backend returned an invalid JSON response.")
+    
+    st.markdown("---")
     st.subheader("📝 Sample Questions")
     st.markdown("""
     - What is our release process?

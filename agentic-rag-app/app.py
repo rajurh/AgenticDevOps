@@ -84,6 +84,44 @@ async def get_rag() -> RAG:
     return _rag
 
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint that verifies app status and Azure OpenAI connectivity."""
+    health_status = {
+        "status": "ok",
+        "app": "agentic-rag",
+        "azure_openai": {
+            "configured": False,
+            "embedding_url_set": bool(EMBEDDING_URL),
+            "chat_url_set": bool(CHAT_URL),
+            "api_key_set": bool(API_KEY),
+            "connection_test": "not_attempted"
+        }
+    }
+    
+    # Check if credentials are configured
+    if EMBEDDING_URL and CHAT_URL and API_KEY:
+        health_status["azure_openai"]["configured"] = True
+        
+        # Test connection by attempting to get a client and make a simple embedding call
+        try:
+            client = await get_client()
+            # Make a minimal test embedding call
+            test_text = "health check"
+            await client.embed_text(test_text)
+            health_status["azure_openai"]["connection_test"] = "success"
+        except Exception as e:
+            health_status["status"] = "degraded"
+            health_status["azure_openai"]["connection_test"] = "failed"
+            health_status["azure_openai"]["error"] = str(e)
+            log_exception(e, "Health check: Azure OpenAI connection test failed")
+    else:
+        health_status["status"] = "degraded"
+        health_status["azure_openai"]["connection_test"] = "skipped"
+    
+    return JSONResponse(health_status)
+
+
 @app.post("/api/query")
 async def query_endpoint(q: QueryRequest):
     try:
