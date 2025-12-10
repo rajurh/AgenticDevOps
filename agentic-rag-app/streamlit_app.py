@@ -31,9 +31,16 @@ if st.button("🔍 Ask", type="primary"):
         st.warning("Please enter a question.")
     else:
         with st.spinner("Searching knowledge base..."):
-            resp = requests.post(f"{API_BASE}/api/query", json={"query": query}, timeout=120)
-            resp.raise_for_status()
-            data = resp.json()
+            try:
+                resp = requests.post(f"{API_BASE}/api/query", json={"query": query}, timeout=120)
+                resp.raise_for_status()
+                data = resp.json()
+            except requests.exceptions.RequestException as e:
+                st.error(f"Failed to contact backend: {e}")
+                data = None
+            except ValueError:
+                st.error("Backend returned an invalid JSON response.")
+                data = None
 
         if data:
             st.success("✅ Answer generated")

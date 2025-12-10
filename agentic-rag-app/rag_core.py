@@ -3,6 +3,9 @@ import asyncio
 from typing import List, Dict, Any
 import httpx
 
+from error_utils import logger, log_exception
+
+
 class AzureOpenAIClient:
     """Lightweight client for Azure OpenAI-style endpoints.
 
@@ -26,23 +29,45 @@ class AzureOpenAIClient:
             resp.raise_for_status()
             body = resp.json()
             # follow Azure OpenAI embedding response shape: {data: [{embedding: [...]}], ...}
-            return body["data"][0]["embedding"]
+            emb = body.get("data", [None])[0]
+            if not emb or "embedding" not in emb:
+                raise RuntimeError("Unexpected embedding response shape from Azure OpenAI")
+            return emb["embedding"]
+        except httpx.RequestError as e:
+            log_exception(e, "Network error when calling Azure OpenAI embeddings")
+            raise RuntimeError("Network error when requesting embeddings") from e
+        except httpx.HTTPStatusError as e:
+            log_exception(e, "HTTP error from Azure OpenAI embeddings")
+            # include status code briefly
+            raise RuntimeError(f"Azure OpenAI embeddings returned HTTP {e.response.status_code}") from e
         except Exception as e:
-            # raise a clearer error for the caller
-            raise RuntimeError(f"Failed to get embedding from Azure OpenAI: {e}")
+            log_exception(e, "Failed to parse embedding response")
+            raise RuntimeError("Failed to get embedding from Azure OpenAI") from e
 
     async def chat_completion(self, messages: List[Dict[str, str]], max_tokens: int = 512, temperature: float = 0.0) -> str:
         payload = {"messages": messages, "max_tokens": max_tokens, "temperature": temperature}
         headers = {"api-key": self.api_key, "Content-Type": "application/json"}
-        resp = await self._client.post(self.chat_url, json=payload, headers=headers)
-        resp.raise_for_status()
-        body = resp.json()
+        try:
+            resp = await self._client.post(self.chat_url, json=payload, headers=headers)
+            resp.raise_for_status()
+            body = resp.json()
+        except httpx.RequestError as e:
+            log_exception(e, "Network error when calling Azure OpenAI chat completion")
+            raise RuntimeError("Network error when requesting chat completion") from e
+        except httpx.HTTPStatusError as e:
+            log_exception(e, "HTTP error from Azure OpenAI chat completion")
+            raise RuntimeError(f"Azure OpenAI chat returned HTTP {e.response.status_code}") from e
+        except Exception as e:
+            log_exception(e, "Failed to get chat completion response")
+            raise RuntimeError("Failed to parse chat completion response") from e
         # Azure chat response shape may be {choices: [{message: {content: "..."}}], ...}
-        # Some previews use choices[0].message.content
-        choice = body.get("choices", [None])[0]
+        choice = None
+        try:
+            choice = body.get("choices", [None])[0]
+        except Exception:
+            choice = None
         if not choice:
             raise RuntimeError("No choices in chat completion response")
-        # try a couple of known shapes
         msg = choice.get("message") or choice.get("content") or {}
         if isinstance(msg, dict):
             return msg.get("content", "")
