@@ -103,18 +103,16 @@ async def health_check():
     if EMBEDDING_URL and CHAT_URL and API_KEY:
         health_status["azure_openai"]["configured"] = True
         
-        # Test connection by attempting to get a client and make a simple embedding call
+        # Verify client can be initialized (lightweight check, no API call)
         try:
             client = await get_client()
-            # Make a minimal test embedding call
-            test_text = "health check"
-            await client.embed_text(test_text)
-            health_status["azure_openai"]["connection_test"] = "success"
+            # Client created successfully means configuration is valid
+            health_status["azure_openai"]["connection_test"] = "configured"
         except Exception as e:
             health_status["status"] = "degraded"
             health_status["azure_openai"]["connection_test"] = "failed"
             health_status["azure_openai"]["error"] = str(e)
-            log_exception(e, "Health check: Azure OpenAI connection test failed")
+            log_exception(e, "Health check: Azure OpenAI client initialization failed")
     else:
         health_status["status"] = "degraded"
         health_status["azure_openai"]["connection_test"] = "skipped"

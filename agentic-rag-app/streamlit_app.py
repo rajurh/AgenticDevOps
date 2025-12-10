@@ -41,7 +41,7 @@ with st.sidebar:
                 st.write(f"- API Key set: {'✅' if azure_info.get('api_key_set') else '❌'}")
                 
                 conn_test = azure_info.get("connection_test", "unknown")
-                if conn_test == "success":
+                if conn_test == "success" or conn_test == "configured":
                     st.write(f"- Connection test: ✅ {conn_test}")
                 elif conn_test == "failed":
                     st.write(f"- Connection test: ❌ {conn_test}")
@@ -52,8 +52,8 @@ with st.sidebar:
                     
             except requests.exceptions.RequestException as e:
                 st.error(f"❌ Failed to contact backend: {e}")
-            except ValueError:
-                st.error("❌ Backend returned an invalid JSON response.")
+            except ValueError as e:
+                st.error(f"❌ Backend returned an invalid response. Expected JSON but received non-JSON content. Error: {e}")
     
     st.markdown("---")
     st.subheader("📝 Sample Questions")

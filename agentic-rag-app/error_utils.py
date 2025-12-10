@@ -22,10 +22,17 @@ def log_exception(e: Exception, context: str = ""):
         logger.error(str(e), exc_info=True)
 
 
-def exception_to_dict(e: Exception) -> Dict[str, Any]:
-    """Convert exception to a dictionary for JSON responses (safe for clients)."""
-    return {
+def exception_to_dict(e: Exception, include_traceback: bool = False) -> Dict[str, Any]:
+    """Convert exception to a dictionary for JSON responses (safe for clients).
+    
+    Args:
+        e: The exception to convert
+        include_traceback: If True, includes full traceback (use only for debugging)
+    """
+    result = {
         "type": type(e).__name__,
-        "message": str(e),
-        "traceback": traceback.format_exc()
+        "message": str(e)
     }
+    if include_traceback:
+        result["traceback"] = traceback.format_exc()
+    return result
