@@ -8,4 +8,4 @@ streamlit==1.27.0
 requests==2.31.0
 
 # --- Intentionally vulnerable package (for security scanning demo) ---
-urllib3==1.25.8    # Known CVEs – will trigger Dependabot + pip-audit alerts
+urllib3==2.6.0    # Known CVEs – will trigger Dependabot + pip-audit alerts
