@@ -4,7 +4,7 @@ httpx==0.24.0
 python-dotenv==1.0.1
 numpy==1.26.0
 pydantic>=2.1.0,<3.0.0
-streamlit==1.27.0
+streamlit==1.37.0
 requests==2.31.0
 
 # --- Intentionally vulnerable package (for security scanning demo) ---
