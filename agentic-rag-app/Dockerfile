@@ -46,6 +46,9 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 # Copy application code
 COPY . /app
 
+# Ensure shell scripts use LF line endings inside image (fix CRLF from Windows)
+RUN if [ -f /app/start.sh ]; then sed -i 's/\r$//' /app/start.sh; fi
+
 # Put nginx site config in place
 RUN mkdir -p /etc/nginx/sites-enabled
 COPY docker/nginx.conf /etc/nginx/sites-enabled/default
